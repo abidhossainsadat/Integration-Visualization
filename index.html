@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Integration: Area Under the Curve</title>
+<style>
+body {
+font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+margin: 0;
+padding: 20px;
+background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+min-height: 100vh;
+color: #e2e8f0;
+}
+
+.container {
+max-width: 1200px;
+margin: 0 auto;
+background: rgba(15, 23, 42, 0.9);
+backdrop-filter: blur(10px);
+border: 1px solid rgba(148, 163, 184, 0.2);
+border-radius: 20px;
+padding: 30px;
+box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+}
+
+h1 {
+text-align: center;
+font-size: 2.5em;
+margin-bottom: 10px;
+text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+color: #f1f5f9;
+background: linear-gradient(135deg, #60a5fa, #a78bfa);
+-webkit-background-clip: text;
+-webkit-text-fill-color: transparent;
+background-clip: text;
+}
+
+.subtitle {
+text-align: center;
+font-size: 1.2em;
+opacity: 0.8;
+margin-bottom: 30px;
+color: #cbd5e0;
+}
+
+.visualization-container {
+display: flex;
+gap: 30px;
+align-items: flex-start;
+}
+
+.canvas-container {
+flex: 2;
+background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+border: 1px solid rgba(71, 85, 105, 0.5);
+border-radius: 15px;
+padding: 20px;
+box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.3), 0 10px 30px rgba(0, 0, 0, 0.4);
+/* Added styles for sticky positioning */
+position: sticky;
+top: 20px; /* Adjust this value to set how far from the top it sticks */
+align-self: flex-start; /* Ensures it aligns to the start of the flex container */
+z-index: 100; /* Ensure it stays on top of other content if any */
+}
+
+#canvas {
+width: 100%;
+height: 500px;
+border: 2px solid #475569;
+border-radius: 10px;
+cursor: crosshair;
+background: #0f172a;
+}
+
+.controls {
+flex: 1;
+background: linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(51, 65, 85, 0.5));
+border: 1px solid rgba(71, 85, 105, 0.3);
+border-radius: 15px;
+padding: 25px;
+backdrop-filter: blur(5px);
+}
+
+.control-group {
+margin-bottom: 25px;
+background: rgba(15, 23, 42, 0.6);
+border: 1px solid rgba(71, 85, 105, 0.3);
+padding: 20px;
+border-radius: 10px;
+}
+
+.control-group h3 {
+margin-top: 0;
+margin-bottom: 15px;
+color: #f1f5f9;
+font-size: 1.1em;
+}
+
+.slider-container, .dropdown-container {
+margin-bottom: 15px;
+}
+
+label {
+display: block;
+margin-bottom: 8px;
+font-weight: 500;
+color: #e2e8f0;
+}
+
+select {
+width: 100%;
+padding: 10px;
+border-radius: 5px;
+border: 1px solid #475569;
+background-color: #1e293b;
+color: #e2e8f0;
+font-size: 1em;
+appearance: none; /* Remove default arrow */
+-webkit-appearance: none;
+-moz-appearance: none;
+cursor: pointer;
+}
+
+select option {
+background-color: #1a1a2e;
+color: #e2e8f0;
+}
+
+input[type="range"] {
+width: 100%;
+height: 6px;
+border-radius: 3px;
+background: rgba(255, 255, 255, 0.3);
+outline: none;
+-webkit-appearance: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+-webkit-appearance: none;
+appearance: none;
+width: 20px;
+height: 20px;
+border-radius: 50%;
+background: linear-gradient(135deg, #60a5fa, #3b82f6);
+cursor: pointer;
+box-shadow: 0 2px 6px rgba(59, 130, 246, 0.5);
+border: 2px solid #1e40af;
+}
+
+input[type="range"]::-moz-range-thumb {
+width: 20px;
+height: 20px;
+border-radius: 50%;
+background: linear-gradient(135deg, #60a5fa, #3b82f6);
+cursor: pointer;
+border: 2px solid #1e40af;
+box-shadow: 0 2px 6px rgba(59, 130, 246, 0.5);
+}
+
+.value-display {
+font-size: 0.9em;
+color: #cbd5e0;
+text-align: right;
+}
+
+button {
+background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+color: white;
+border: none;
+padding: 12px 20px;
+border-radius: 8px;
+cursor: pointer;
+font-size: 1em;
+font-weight: 500;
+transition: all 0.3s ease;
+width: 100%;
+box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+button:hover {
+transform: translateY(-2px);
+box-shadow: 0 6px 20px rgba(59, 130, 246, 0.6);
+background: linear-gradient(135deg, #2563eb, #1e40af);
+}
+
+.info-panel {
+background: rgba(15, 23, 42, 0.8);
+border: 1px solid rgba(71, 85, 105, 0.4);
+padding: 20px;
+border-radius: 10px;
+margin-top: 20px;
+}
+
+.area-display {
+font-size: 1.4em;
+font-weight: bold;
+color: #fbbf24;
+text-align: center;
+margin: 15px 0;
+text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.function-display {
+font-family: 'Courier New', monospace;
+background: rgba(0, 0, 0, 0.6);
+border: 1px solid rgba(71, 85, 105, 0.4);
+padding: 10px;
+border-radius: 5px;
+text-align: center;
+margin: 10px 0;
+color: #e2e8f0;
+}
+
+@media (max-width: 768px) {
+.visualization-container {
+flex-direction: column;
+}
+
+.container {
+padding: 20px;
+}
+
+h1 {
+font-size: 2em;
+}
+
+.canvas-container {
+position: static; /* Remove sticky on smaller screens if it causes layout issues */
+margin-bottom: 20px; /* Add some space below the canvas */
+}
+}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>∫ Integration Visualization</h1>
+<p class="subtitle">Explore how integration calculates the area under a curve</p>
+
+<div class="visualization-container">
+<div class="canvas-container">
+<canvas id="canvas"></canvas>
+</div>
+
+<div class="controls">
+<div class="control-group">
+<h3>📊 Function Selection</h3>
+<div class="dropdown-container">
+<label for="functionSelect">Select Function:</label>
+<select id="functionSelect">
+<option value="x">f(x) = x</option>
+<option value="oneOverX">f(x) = 1/x</option>
+<option value="xSquared">f(x) = x²</option>
+<option value="xCubed">f(x) = x³</option>
+<option value="cosX">f(x) = cos(x)</option>
+<option value="sinX" selected>f(x) = sin(x)</option>
+<option value="tanX">f(x) = tan(x)</option>
+<option value="lnX">f(x) = ln(x)</option>
+<option value="eX">f(x) = e^x</option>
+<option value="eNegX">f(x) = e^(-x)</option>
+</select>
+</div>
+</div>
+
+<div class="control-group">
+<h3>⚙️ Function Parameters</h3>
+<div class="slider-container">
+<label for="verticalScaling">Vertical Scaling (A): <span id="verticalScalingValue">1.0</span></label>
+<input type="range" id="verticalScaling" min="0.1" max="4" step="0.1" value="1.0">
+</div>
+<div class="slider-container">
+<label for="horizontalScaling">Horizontal Scaling (B): <span id="horizontalScalingValue">1.0</span></label>
+<input type="range" id="horizontalScaling" min="0.1" max="3" step="0.1" value="1.0">
+</div>
+<div class="slider-container">
+<label for="horizontalShift">Horizontal Shift (C): <span id="horizontalShiftValue">0.0</span></label>
+<input type="range" id="horizontalShift" min="-3.14" max="3.14" step="0.1" value="0.0">
+</div>
+<div class="slider-container">
+<label for="verticalShift">Vertical Shift (D): <span id="verticalShiftValue">0.0</span></label>
+<input type="range" id="verticalShift" min="-4" max="4" step="0.1" value="0.0">
+</div>
+</div>
+
+<div class="control-group">
+<h3>📏 Integration Bounds</h3>
+<div class="slider-container">
+<label for="lowerBound">Lower Bound (a): <span id="lowerValue">0</span></label>
+<input type="range" id="lowerBound" min="-5" max="8" step="0.1" value="0">
+</div>
+<div class="slider-container">
+<label for="upperBound">Upper Bound (b): <span id="upperValue">4</span></label>
+<input type="range" id="upperBound" min="-4" max="10" step="0.1" value="4">
+</div>
+</div>
+
+<div class="control-group">
+<h3>🎛️ Visualization</h3>
+<div class="slider-container">
+<label for="rectangles">Riemann Rectangles: <span id="rectanglesValue">20</span></label>
+<input type="range" id="rectangles" min="1" max="100" step="1" value="20">
+</div>
+<button onclick="toggleAnimation()">🎬 Toggle Animation</button>
+</div>
+
+<div class="info-panel">
+<div class="function-display" id="functionDisplay">
+f(x) = sin(x)
+</div>
+<div class="area-display" id="areaDisplay">
+Area ≈ 0.000
+</div>
+<p style="font-size: 0.9em; text-align: center; opacity: 0.8;">
+The shaded region represents ∫<sub>a</sub><sup>b</sup> f(x) dx
+</p>
+</div>
+</div>
+</div>
+</div>
+
+<script>
+// Canvas and context setup
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+// Set canvas size for crisp rendering
+function resizeCanvas() {
+const rect = canvas.getBoundingClientRect();
+canvas.width = rect.width * window.devicePixelRatio;
+canvas.height = rect.height * window.devicePixelRatio;
+ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+canvas.style.width = rect.width + 'px';
+canvas.style.height = rect.height + 'px';
+}
+
+// Animation variables
+let animationId;
+let isAnimating = false;
+
+// Get all control elements
+const controls = {
+functionSelect: document.getElementById('functionSelect'),
+verticalScaling: document.getElementById('verticalScaling'),
+horizontalScaling: document.getElementById('horizontalScaling'), // New control
+horizontalShift: document.getElementById('horizontalShift'),   // New control
+verticalShift: document.getElementById('verticalShift'),
+lowerBound: document.getElementById('lowerBound'),
+upperBound: document.getElementById('upperBound'),
+rectangles: document.getElementById('rectangles')
+};
+
+// Get display elements
+const displays = {
+verticalScaling: document.getElementById('verticalScalingValue'),
+horizontalScaling: document.getElementById('horizontalScalingValue'), // New display
+horizontalShift: document.getElementById('horizontalShiftValue'),     // New display
+verticalShift: document.getElementById('verticalShiftValue'),
+lower: document.getElementById('lowerValue'),
+upper: document.getElementById('upperValue'),
+rectangles: document.getElementById('rectanglesValue'),
+function: document.getElementById('functionDisplay'),
+area: document.getElementById('areaDisplay')
+};
+
+// Mathematical function: f(x) = A * selected_function(B * x + C) + D
+function f(x, params) {
+let result;
+// Apply horizontal scaling and shift *before* passing to the base function
+const effectiveX = params.B * x + params.C; 
+
+switch (params.selectedFunction) {
+case 'x':
+result = effectiveX;
+break;
+case 'oneOverX':
+result = 1 / effectiveX;
+break;
+case 'xSquared':
+result = effectiveX * effectiveX;
+break;
+case 'xCubed':
+result = effectiveX * effectiveX * effectiveX;
+break;
+case 'cosX':
+result = Math.cos(effectiveX);
+break;
+case 'sinX':
+result = Math.sin(effectiveX);
+break;
+case 'tanX':
+result = Math.tan(effectiveX);
+break;
+case 'lnX':
+result = Math.log(effectiveX);
+break;
+case 'eX':
+result = Math.exp(effectiveX);
+break;
+case 'eNegX':
+result = Math.exp(-effectiveX);
+break;
+default:
+result = Math.sin(effectiveX); // Default to sine
+}
+
+// Apply vertical scaling and shift *after* evaluating the base function
+return params.A * result + params.D;
+}
+
+// Get current parameters from controls
+function getParams() {
+return {
+selectedFunction: controls.functionSelect.value,
+A: parseFloat(controls.verticalScaling.value),
+B: parseFloat(controls.horizontalScaling.value), // Get B
+C: parseFloat(controls.horizontalShift.value),   // Get C
+D: parseFloat(controls.verticalShift.value),
+a: parseFloat(controls.lowerBound.value),
+b: parseFloat(controls.upperBound.value),
+n: parseInt(controls.rectangles.value)
+};
+}
+
+// Numerical integration using Simpson's rule for accuracy
+function integrate(params) {
+const n = 1000; // High precision for actual calculation
+const h = (params.b - params.a) / n;
+let sum = f(params.a, params) + f(params.b, params);
+
+for (let i = 1; i < n; i++) {
+const x = params.a + i * h;
+const multiplier = (i % 2 === 0) ? 2 : 4;
+sum += multiplier * f(x, params);
+}
+
+return (h / 3) * sum;
+}
+
+// Convert mathematical coordinates to canvas coordinates
+function toCanvasCoords(x, y, canvasWidth, canvasHeight) {
+const xRange = 12; // Show x from -6 to 6
+const xOffset = 6; // Offset to center x-axis at 0
+const yRange = 8; // Show y from -4 to 4
+const yOffset = 4; // Offset to center the graph around y=0
+
+return {
+x: ((x + xOffset) / xRange) * canvasWidth,
+y: canvasHeight - ((y + yOffset) / yRange) * canvasHeight
+};
+}
+
+// Convert canvas coordinates back to mathematical coordinates
+function fromCanvasCoords(canvasX, canvasY, canvasWidth, canvasHeight) {
+const xRange = 12;
+const xOffset = 6;
+const yRange = 8;
+const yOffset = 4;
+
+return {
+x: (canvasX / canvasWidth) * xRange - xOffset,
+y: ((canvasHeight - canvasY) / canvasHeight) * yRange - yOffset
+};
+}
+
+// Main drawing function
+function draw() {
+const rect = canvas.getBoundingClientRect();
+const canvasWidth = rect.width;
+const canvasHeight = rect.height;
+
+// Clear canvas with dark gradient background
+const gradient = ctx.createLinearGradient(0, 0, 0, canvasHeight);
+gradient.addColorStop(0, '#0f172a');
+gradient.addColorStop(1, '#1e293b');
+ctx.fillStyle = gradient;
+ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+const params = getParams();
+
+// Draw coordinate system
+drawAxes(canvasWidth, canvasHeight);
+
+// Draw function curve
+drawCurve(params, canvasWidth, canvasHeight);
+
+// Draw integration area
+drawIntegrationArea(params, canvasWidth, canvasHeight);
+
+// Draw Riemann rectangles
+drawRiemannRectangles(params, canvasWidth, canvasHeight);
+
+// Draw integration bounds
+drawBounds(params, canvasWidth, canvasHeight);
+
+// Update displays
+updateDisplays(params);
+}
+
+function drawAxes(canvasWidth, canvasHeight) {
+ctx.strokeStyle = '#64748b';
+ctx.lineWidth = 2;
+
+// X-axis (y=0)
+const xAxisY = toCanvasCoords(0, 0, canvasWidth, canvasHeight).y;
+ctx.beginPath();
+ctx.moveTo(0, xAxisY);
+ctx.lineTo(canvasWidth, xAxisY);
+ctx.stroke();
+
+// Y-axis (x=0)
+const yAxisX = toCanvasCoords(0, 0, canvasWidth, canvasHeight).x;
+ctx.beginPath();
+ctx.moveTo(yAxisX, 0);
+ctx.lineTo(yAxisX, canvasHeight);
+ctx.stroke();
+
+// Grid lines and labels
+ctx.strokeStyle = '#334155';
+ctx.lineWidth = 1;
+ctx.fillStyle = '#94a3b8';
+ctx.font = '12px Arial';
+ctx.textAlign = 'center';
+
+// X-axis labels and grid (from -5 to 10 for consistency with bounds)
+for (let x = -5; x <= 10; x += 1) { // Adjusted range and step for clarity
+const canvasX = toCanvasCoords(x, 0, canvasWidth, canvasHeight).x;
+ctx.beginPath();
+ctx.moveTo(canvasX, 0);
+ctx.lineTo(canvasX, canvasHeight);
+ctx.stroke();
+
+if (x !== 0) {
+ctx.fillText(x.toString(), canvasX, xAxisY + 20);
+}
+}
+
+// Y-axis labels and grid (from -4 to 4 for clarity)
+ctx.textAlign = 'right';
+for (let y = -4; y <= 4; y += 1) {
+const canvasY = toCanvasCoords(0, y, canvasWidth, canvasHeight).y;
+ctx.beginPath();
+ctx.moveTo(0, canvasY);
+ctx.lineTo(canvasWidth, canvasY);
+ctx.stroke();
+
+if (y !== 0) {
+ctx.fillText(y.toString(), yAxisX - 10, canvasY + 4);
+}
+}
+}
+
+function drawCurve(params, canvasWidth, canvasHeight) {
+ctx.strokeStyle = '#f1f5f9';
+ctx.lineWidth = 3;
+ctx.beginPath();
+
+const step = 0.01;
+let firstPoint = true;
+
+// Iterate over the full visible x-range
+const xMinVisible = -6; 
+const xMaxVisible = 6; 
+
+for (let x = xMinVisible; x <= xMaxVisible; x += step) {
+const y = f(x, params);
+
+// Handle non-finite values (e.g., ln(x) for x <= 0, 1/x at x=0, tan(x) at asymptotes)
+if (isFinite(y)) {
+const canvasCoords = toCanvasCoords(x, y, canvasWidth, canvasHeight);
+if (firstPoint) {
+ctx.moveTo(canvasCoords.x, canvasCoords.y);
+firstPoint = false;
+} else {
+ctx.lineTo(canvasCoords.x, canvasCoords.y);
+}
+} else {
+// If the value is not finite, break the line
+firstPoint = true;
+}
+}
+
+ctx.stroke();
+}
+
+function drawIntegrationArea(params, canvasWidth, canvasHeight) {
+// Create gradient for the area with vibrant colors that pop against dark background
+const gradient = ctx.createLinearGradient(0, 0, 0, canvasHeight);
+gradient.addColorStop(0, 'rgba(96, 165, 250, 0.8)'); // Blue for positive area
+gradient.addColorStop(0.5, 'rgba(59, 130, 246, 0.6)');
+gradient.addColorStop(1, 'rgba(239, 68, 68, 0.6)'); // Red for negative area
+ctx.fillStyle = gradient;
+
+const step = 0.01;
+const xAxisY = toCanvasCoords(0, 0, canvasWidth, canvasHeight).y;
+
+ctx.beginPath();
+// Start from the x-axis at lower bound
+ctx.moveTo(toCanvasCoords(params.a, 0, canvasWidth, canvasHeight).x, xAxisY);
+
+// Trace the curve from a to b
+for (let x = params.a; x <= params.b; x += step) {
+const y = f(x, params);
+if (isFinite(y)) {
+const canvasCoords = toCanvasCoords(x, y, canvasWidth, canvasHeight);
+ctx.lineTo(canvasCoords.x, canvasCoords.y);
+} else {
+// If the function is undefined, close current path and start a new one if it becomes defined again
+ctx.lineTo(toCanvasCoords(x - step, 0, canvasWidth, canvasHeight).x, xAxisY); // Back to x-axis
+ctx.fill();
+ctx.beginPath();
+ctx.moveTo(toCanvasCoords(x + step, 0, canvasWidth, canvasHeight).x, xAxisY); // Move to next defined point
+}
+}
+
+// Close the path along the x-axis
+ctx.lineTo(toCanvasCoords(params.b, 0, canvasWidth, canvasHeight).x, xAxisY);
+ctx.closePath();
+ctx.fill();
+}
+
+function drawRiemannRectangles(params, canvasWidth, canvasHeight) {
+if (params.n === 0) return;
+
+const dx = (params.b - params.a) / params.n;
+const xAxisY = toCanvasCoords(0, 0, canvasWidth, canvasHeight).y;
+
+ctx.lineWidth = 1;
+
+for (let i = 0; i < params.n; i++) {
+const x = params.a + i * dx;
+const nextX = x + dx;
+const y = f(x + dx/2, params); // Midpoint rule for better approximation
+
+if (isFinite(y)) {
+const leftCoords = toCanvasCoords(x, 0, canvasWidth, canvasHeight);
+const rightCoords = toCanvasCoords(nextX, 0, canvasWidth, canvasHeight);
+const topOrBottomCoords = toCanvasCoords(x, y, canvasWidth, canvasHeight);
+
+const rectWidth = rightCoords.x - leftCoords.x;
+const rectHeight = Math.abs(topOrBottomCoords.y - xAxisY); // Use absolute height
+
+if (y >= 0) {
+ctx.fillStyle = 'rgba(237, 137, 54, 0.3)'; // Orange for positive area
+ctx.strokeStyle = 'rgba(237, 137, 54, 0.8)';
+ctx.fillRect(leftCoords.x, topOrBottomCoords.y, rectWidth, rectHeight);
+ctx.strokeRect(leftCoords.x, topOrBottomCoords.y, rectWidth, rectHeight);
+} else {
+ctx.fillStyle = 'rgba(239, 68, 68, 0.3)'; // Red for negative area
+ctx.strokeStyle = 'rgba(239, 68, 68, 0.8)';
+ctx.fillRect(leftCoords.x, xAxisY, rectWidth, rectHeight);
+ctx.strokeRect(leftCoords.x, xAxisY, rectWidth, rectHeight);
+}
+}
+}
+}
+
+function drawBounds(params, canvasWidth, canvasHeight) {
+ctx.strokeStyle = '#e53e3e';
+ctx.lineWidth = 3;
+ctx.setLineDash([5, 5]);
+
+// Lower bound line
+const lowerCoordsBottom = toCanvasCoords(params.a, -4, canvasWidth, canvasHeight);
+const lowerCoordsTop = toCanvasCoords(params.a, 4, canvasWidth, canvasHeight);
+ctx.beginPath();
+ctx.moveTo(lowerCoordsBottom.x, lowerCoordsBottom.y);
+ctx.lineTo(lowerCoordsTop.x, lowerCoordsTop.y);
+ctx.stroke();
+
+// Upper bound line
+const upperCoordsBottom = toCanvasCoords(params.b, -4, canvasWidth, canvasHeight);
+const upperCoordsTop = toCanvasCoords(params.b, 4, canvasWidth, canvasHeight);
+ctx.beginPath();
+ctx.moveTo(upperCoordsBottom.x, upperCoordsBottom.y);
+ctx.lineTo(upperCoordsTop.x, upperCoordsTop.y);
+ctx.stroke();
+
+ctx.setLineDash([]); // Reset line dash
+
+// Labels for bounds
+ctx.fillStyle = '#e53e3e';
+ctx.font = 'bold 14px Arial';
+ctx.textAlign = 'center';
+const xAxisY = toCanvasCoords(0, 0, canvasWidth, canvasHeight).y;
+ctx.fillText('a', lowerCoordsBottom.x, xAxisY + 20);
+ctx.fillText('b', upperCoordsBottom.x, xAxisY + 20);
+}
+
+function updateDisplays(params) {
+// Update parameter displays
+displays.verticalScaling.textContent = params.A.toFixed(1);
+displays.horizontalScaling.textContent = params.B.toFixed(1);
+displays.horizontalShift.textContent = params.C.toFixed(1);
+displays.verticalShift.textContent = params.D.toFixed(1);
+displays.lower.textContent = params.a.toFixed(1);
+displays.upper.textContent = params.b.toFixed(1);
+displays.rectangles.textContent = params.n;
+
+// Update function display
+const A_display = params.A === 1 ? '' : params.A.toFixed(1) + '·';
+let B_display = params.B === 1 ? 'x' : params.B.toFixed(1) + 'x';
+let C_display = params.C === 0 ? '' : (params.C > 0 ? ' + ' + params.C.toFixed(1) : ' - ' + Math.abs(params.C).toFixed(1));
+const D_display = params.D === 0 ? '' : (params.D > 0 ? ' + ' + params.D.toFixed(1) : ' - ' + Math.abs(params.D).toFixed(1));
+
+// Format the inner part (Bx + C)
+let innerExpression;
+if (params.B === 1 && params.C === 0) {
+innerExpression = 'x';
+} else if (params.B === 1) {
+innerExpression = `x${C_display}`;
+} else if (params.C === 0) {
+innerExpression = `${B_display}`;
+} else {
+innerExpression = `${B_display}${C_display}`;
+}
+
+let funcBaseString;
+switch (params.selectedFunction) {
+case 'x':
+funcBaseString = `(${innerExpression})`;
+break;
+case 'oneOverX':
+funcBaseString = `1/(${innerExpression})`;
+break;
+case 'xSquared':
+funcBaseString = `(${innerExpression})²`;
+break;
+case 'xCubed':
+funcBaseString = `(${innerExpression})³`;
+break;
+case 'cosX':
+funcBaseString = `cos(${innerExpression})`;
+break;
+case 'sinX':
+funcBaseString = `sin(${innerExpression})`;
+break;
+case 'tanX':
+funcBaseString = `tan(${innerExpression})`;
+break;
+case 'lnX':
+funcBaseString = `ln(${innerExpression})`;
+break;
+case 'eX':
+funcBaseString = `e^(${innerExpression})`;
+break;
+case 'eNegX':
+funcBaseString = `e^(-(${innerExpression}))`;
+break;
+default:
+funcBaseString = `f(x)`;
+}
+displays.function.textContent = `f(x) = ${A_display}${funcBaseString}${D_display}`;
+
+// Calculate and display area
+const area = integrate(params);
+displays.area.textContent = `Area ≈ ${area.toFixed(3)}`;
+}
+
+// Animation function (can be re-enabled or modified if needed)
+function animate() {
+if (!isAnimating) return;
+draw();
+animationId = requestAnimationFrame(animate);
+}
+
+function toggleAnimation() {
+isAnimating = !isAnimating;
+if (isAnimating) {
+draw(); 
+animate();
+} else {
+cancelAnimationFrame(animationId);
+}
+}
+
+// Event listeners for all controls
+Object.keys(controls).forEach(key => {
+controls[key].addEventListener('input', draw);
+});
+
+// Initialize
+window.addEventListener('resize', () => {
+resizeCanvas();
+draw();
+});
+
+resizeCanvas();
+draw();
+
+// Add some educational interactivity
+canvas.addEventListener('mousemove', function(event) {
+const rect = canvas.getBoundingClientRect();
+const canvasX = event.clientX - rect.left;
+const canvasY = event.clientY - rect.top;
+const mathCoords = fromCanvasCoords(canvasX, canvasY, rect.width, rect.height);
+
+// Update cursor to show coordinates (could be enhanced)
+canvas.title = `x: ${mathCoords.x.toFixed(2)}, y: ${mathCoords.y.toFixed(2)}`;
+});
+</script>
+</body>
+</html>
